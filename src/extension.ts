@@ -57,6 +57,32 @@ function tt(key: string, args: Record<string, string | number>): string {
   return s;
 }
 
+// ── Default profiles ──
+
+function ensureDefaultProfiles() {
+  const profiles = getProfiles();
+  if (profiles.length > 0) return;
+
+  const defaults: TerminalProfile[] = [
+    {
+      id: "powershell-default",
+      name: "PowerShell",
+      shell: "powershell",
+      commands: [],
+      openIn: "panel",
+    },
+    {
+      id: "cmd-default",
+      name: "CMD",
+      shell: "cmd",
+      commands: [],
+      openIn: "panel",
+    },
+  ];
+  setProfiles(defaults);
+  setDefaultProfileId("powershell-default");
+}
+
 // ── Profile Storage ──
 
 function getProfiles(): TerminalProfile[] {
@@ -306,6 +332,9 @@ function updateStatusBar(item: vscode.StatusBarItem | undefined) {
 // ── Activate ──
 
 export function activate(context: vscode.ExtensionContext) {
+  // İlk kurulumda varsayılan profilleri oluştur
+  ensureDefaultProfiles();
+
   // Profile Tree View
   const treeProvider = new ProfileTreeProvider();
   context.subscriptions.push(
@@ -385,10 +414,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("codehub.runProfile", async (id?: string) => {
       const profileId = id || getDefaultProfileId();
       const profile = getProfiles().find((p) => p.id === profileId);
-      if (!profile) {
-        vscode.window.showWarningMessage(t("noProfiles"));
-        return;
-      }
+      if (!profile) return;
       await runProfile(profile);
     }),
   );
@@ -396,12 +422,10 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("codehub.runDefaultProfile", async () => {
       const id = getDefaultProfileId();
-      if (!id) {
-        vscode.window.showWarningMessage(t("noProfiles"));
-        return;
-      }
+      if (!id) return;
       const profile = getProfiles().find((p) => p.id === id);
-      if (profile) await runProfile(profile);
+      if (!profile) return;
+      await runProfile(profile);
     }),
   );
 
