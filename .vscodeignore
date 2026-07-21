@@ -1,0 +1,12 @@
+**/node_modules
+**/node_modules/**
+.vscode/**
+.kilo/**
+.gitignore
+.gitattributes
+.tsbuildinfo
+src/**
+out/**/*.map
+*.vsix
+README*.md
+package-lock.json
