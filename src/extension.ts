@@ -163,7 +163,7 @@ async function impProf() {
 
 async function pickIcon(existing?: string): Promise<string | undefined> {
   const ch = await vscode.window.showQuickPick([
-    { label: `$(close) ${t("exec")} ${t("settings")} (Enter)`, id: "none" },
+    { label: `$(close) İkonsuz devam et (Enter)`, id: "none" },
     { label: `$(symbol-color) Tema ikonu seç`, id: "theme" },
   ], { placeHolder: t("searchLib") });
   if (!ch) return; if (ch.id === "none") return existing !== undefined ? existing : "";

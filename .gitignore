@@ -4,3 +4,4 @@ node_modules/
 .vscode-test/
 .tsbuildinfo
 .vscode/settings.json
+.kilo/
