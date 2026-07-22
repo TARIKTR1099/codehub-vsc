@@ -283,6 +283,7 @@ class SidePanel implements vscode.WebviewViewProvider {
       if (m.type === "delete") { const ok = (await vscode.window.showQuickPick([t("yes"), t("no")], { placeHolder: t("confirmDel") })) === t("yes"); if (!ok) { this.sync(); return; } const list = getP().filter((x) => x.id !== m.id); setP(list); if (cfg().get<string>("defaultProfile", "") === m.id) cfg().update("defaultProfile", "", vscode.ConfigurationTarget.Global); this.sync(); vscode.window.showInformationMessage(t("deleted")); return; }
       if (m.type === "dup") { const x = g(); if (!x) return; const c = { ...x, id: genId(), name: `${x.name} (kopya)` }; const list = getP(); list.push(c); setP(list); this.sync(); vscode.window.showInformationMessage(t("updated")); return; }
       if (m.type === "up" || m.type === "down") { const list = getP(); const i = list.findIndex((x) => x.id === m.id); if (i < 0) return; const j = m.type === "up" ? i - 1 : i + 1; if (j < 0 || j >= list.length) return; [list[i], list[j]] = [list[j], list[i]]; setP(list); this.sync(); return; }
+      if (m.type === "reorder") { const list = getP(); const i = list.findIndex((x) => x.id === m.id); if (i < 0) return; const to = Math.max(0, Math.min(list.length - 1, (parseInt(m.value) || 1) - 1)); const item = list.splice(i, 1)[0]; list.splice(to, 0, item); setP(list); this.sync(); return; }
       if (m.type === "p-status") { pickProfile(t("setStatusBar"), "statusBarProfile"); this.sync(); return; }
       if (m.type === "p-startup") { pickProfile(t("setStartup"), "startupProfile"); this.sync(); return; }
       if (m.type === "p-shortcut") { pickProfile(t("setShortcut"), "shortcutProfile"); this.sync(); return; }
@@ -298,23 +299,24 @@ class SidePanel implements vscode.WebviewViewProvider {
     const n = () => { const c = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"; let r = ""; for (let i = 0; i < 32; i++) r += c[Math.floor(Math.random() * c.length)]; return r; };
     const esc = (s: string) => s.replace(/[&<>"']/g, (m) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[m] || m);
 
-    const profileRows = list.map((p) => {
+    const profileRows = list.map((p, idx) => {
       const isDef = p.id === (cfg().get<string>("defaultProfile", "") || topId());
       const icon = p.icon ? `<span class="ti codicon codicon-${esc(p.icon)}"></span>` : `<span class="si">${p.shell[0].toUpperCase()}</span>`;
       const mc = p.openIn === "cli" ? "mc-c" : p.openIn === "desktop" ? "mc-d" : "mc-v";
-      return `<div class="pr ${isDef?"d":""}">
+      const first = idx === 0;
+      const last = idx === list.length - 1;
+      return `<div class="pr ${isDef?"d":""}" data-idx="${idx+1}">
+        <input class="on" type="number" value="${idx+1}" min="1" max="${list.length}" onchange="p('reorder','${p.id}',this.value)" title="S\u0131ra">
         <div class="pi" onclick="p('run','${p.id}')">
           ${icon}<span class="pn">${esc(p.name)}</span>
           <span class="mc ${mc}"></span>
         </div>
         <div class="pa">
-          <button class="b" onclick="p('runV','${p.id}')" title="VSCode">\u25B3</button>
-          <button class="b" onclick="p('runD','${p.id}')" title="Desktop">\u25A0</button>
-          <button class="b" onclick="p('dup','${p.id}')" title="Kopyala">\u{1F4CB}</button>
-          <button class="b" onclick="p('up','${p.id}')" title="Yukar\u0131">\u25B2</button>
-          <button class="b" onclick="p('down','${p.id}')" title="A\u015Fa\u011F\u0131">\u25BC</button>
+          <button class="b bp" onclick="p('runV','${p.id}')" title="Yan panelde a\u00E7">\u25A1</button>
           <button class="b" onclick="p('edit','${p.id}')" title="D\u00FCzenle">\u270E</button>
-          <button class="b d" onclick="p('delete','${p.id}')" title="Sil">\u2716</button>
+          <button class="b bd" onclick="p('delete','${p.id}')" title="Sil">\u2716</button>
+          <button class="b bu" onclick="p('up','${p.id}')" ${first?'disabled':''} title="Yukar\u0131" style="${first?'opacity:.2;cursor:default':'opacity:.7'}">\u25B2</button>
+          <button class="b bu" onclick="p('down','${p.id}')" ${last?'disabled':''} title="A\u015Fa\u011F\u0131" style="${last?'opacity:.2;cursor:default':'opacity:.7'}">\u25BC</button>
         </div>
       </div>`;
     }).join("");
@@ -325,36 +327,43 @@ class SidePanel implements vscode.WebviewViewProvider {
 
     return `<!DOCTYPE html><html lang="${lang}"><head><meta charset="UTF-8"/><style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{padding:12px;font-family:var(--vscode-font-family);font-size:var(--vscode-font-size);color:var(--vscode-foreground);line-height:1.5}
-.h{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.h .s{font-size:12px;font-weight:400;opacity:.5;margin-left:auto}
-.q{display:flex;gap:6px;margin-bottom:8px}
-.qb{flex:1;padding:10px 8px;border:none;border-radius:6px;cursor:pointer;font-size:13px;text-align:center;background:var(--vscode-button-background);color:var(--vscode-button-foreground);font-weight:500}
-.qb:hover{opacity:.85}
-.qs{background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground)}
-.sl{font-size:12px;text-transform:uppercase;opacity:.5;letter-spacing:.5px;margin:10px 0 6px;font-weight:600}
-.ac{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.acb{padding:8px 10px;border:none;border-radius:6px;cursor:pointer;font-size:12px;background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);flex:1;min-width:100px;text-align:center}
+body{padding:14px;font-family:var(--vscode-font-family);font-size:var(--vscode-font-size);color:var(--vscode-foreground);line-height:1.6}
+.h{font-size:17px;font-weight:600;display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid color-mix(in srgb,var(--vscode-foreground) 10%,transparent)}
+.h .s{font-size:13px;font-weight:400;opacity:.5;margin-left:auto}
+.sl{font-size:14px;text-transform:uppercase;opacity:.5;letter-spacing:.5px;margin:14px 0 8px;font-weight:600}
+.ac{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.acb{padding:10px 12px;border:none;border-radius:8px;cursor:pointer;font-size:13px;background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);flex:1;min-width:110px;text-align:center}
 .acb:hover{opacity:.85}
-.acb .lbl{font-size:10px;opacity:.6;display:block;margin-bottom:3px}
-.pr{display:flex;align-items:center;gap:4px;padding:8px 8px;border-radius:6px;margin:3px 0;transition:background .1s}
+.acb .lbl{font-size:11px;opacity:.6;display:block;margin-bottom:4px}
+.acb-a{background:color-mix(in srgb,var(--vscode-button-background) 20%,transparent);color:var(--vscode-foreground)}
+.pr{display:flex;align-items:center;gap:6px;padding:10px 8px;border-radius:8px;margin:4px 0;transition:background .1s;background:var(--vscode-sideBar-background)}
 .pr:hover{background:var(--vscode-list-hoverBackground)}
-.pr.d{background:color-mix(in srgb,var(--vscode-focusBorder) 8%,transparent);border:1px solid color-mix(in srgb,var(--vscode-focusBorder) 20%,transparent)}
-.pi{display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0}
-.ti{width:22px;height:22px;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:.9}
-.si{width:24px;height:24px;border-radius:5px;background:var(--vscode-badge-background);color:var(--vscode-badge-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
-.pn{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.pr.d{background:color-mix(in srgb,var(--vscode-focusBorder) 10%,transparent);border:1px solid color-mix(in srgb,var(--vscode-focusBorder) 25%,transparent)}
+.on{width:32px;height:28px;border-radius:4px;border:1px solid color-mix(in srgb,var(--vscode-foreground) 20%,transparent);background:transparent;color:var(--vscode-foreground);text-align:center;font-size:12px;font-weight:500;flex-shrink:0}
+.on:focus{border-color:var(--vscode-focusBorder);outline:none}
+.pi{display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;padding:4px 0}
+.ti{width:26px;height:26px;font-size:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:.9}
+.si{width:28px;height:28px;border-radius:6px;background:var(--vscode-badge-background);color:var(--vscode-badge-foreground);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.pn{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .mc{width:8px;height:8px;border-radius:4px;flex-shrink:0}
 .mc-c{background:var(--vscode-testing-iconPassed)}
 .mc-d{background:var(--vscode-testing-iconFailed)}
 .mc-v{background:var(--vscode-testing-iconQueued)}
-.pa{display:flex;gap:4px;flex-shrink:0}
-.b{width:24px;height:24px;border:none;border-radius:4px;cursor:pointer;font-size:11px;background:transparent;color:var(--vscode-foreground);opacity:.4;display:flex;align-items:center;justify-content:center;padding:0;transition:all .1s}
+.pa{display:flex;gap:4px;flex-shrink:0;align-items:center}
+.b{width:28px;height:28px;border:none;border-radius:5px;cursor:pointer;font-size:13px;background:transparent;color:var(--vscode-foreground);opacity:.5;display:flex;align-items:center;justify-content:center;padding:0;transition:all .12s}
 .b:hover{opacity:1;background:var(--vscode-toolbar-hoverBackground);transform:scale(1.15)}
-.b.d:hover{color:var(--vscode-errorForeground)}
-.st{font-size:12px;opacity:.4}
-.emp{padding:20px;text-align:center;font-size:13px;opacity:.5;line-height:1.6}
-.acb-a{background:color-mix(in srgb,var(--vscode-button-background) 20%,transparent);color:var(--vscode-foreground)}
+.bd:hover{color:var(--vscode-errorForeground)}
+.bu{opacity:.7}
+.bu:hover{opacity:1}
+.bu:disabled{opacity:.2;cursor:default;transform:none}
+.bp{color:var(--vscode-testing-iconPassed)}
+.st{font-size:13px;opacity:.4}
+.qb{width:100%;padding:12px 8px;border:none;border-radius:8px;cursor:pointer;font-size:14px;text-align:center;font-weight:500;margin-bottom:6px}
+.qb-p{background:var(--vscode-button-background);color:var(--vscode-button-foreground)}
+.qb:hover{opacity:.85}
+.qb-s{background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground)}
+.qb-d{background:color-mix(in srgb,var(--vscode-errorForeground) 15%,transparent);color:var(--vscode-errorForeground)}
+.emp{padding:24px;text-align:center;font-size:14px;opacity:.5;line-height:1.6}
 </style></head><body>
 <div class="h">CodeHub <span class="s">${tc > 0 ? tt("terminalCount",{n:tc}) : ''}</span></div>
 
@@ -364,18 +373,15 @@ body{padding:12px;font-family:var(--vscode-font-family);font-size:var(--vscode-f
   <button class="acb" onclick="p('p-shortcut')"><span class="lbl">${t("setShortcut")}</span>${esc(sk)}</button>
 </div>
 
-<div class="sl">${t("addProfile")}</div>
+<div class="sl">${t("profileList")}</div>
 ${list.length > 0 ? profileRows : `<div class="emp">${t("noProfiles")}</div>`}
 
-<div style="display:flex;gap:4px;margin-top:4px">
-  <button class="qb qs" style="flex:1;border:1px dashed var(--vscode-input-border)" onclick="p('add')">+ ${t("addProfile")}</button>
-  <button class="qb qs" style="flex:1" onclick="p('addLib')">${t("addFromLib")}</button>
-</div>
+<button class="qb qb-s" style="margin-top:4px;border:1px dashed var(--vscode-input-border)" onclick="p('add')">+ ${t("addProfile")}</button>
+<button class="qb qb-s" onclick="p('addLib')">${t("addFromLib")}</button>
+<button class="qb qb-s" style="margin-top:6px" onclick="p('set')">${t("settings")}</button>
+<button class="qb qb-d" onclick="p('closeAll')">${t("closeAll")}</button>
 
-<button class="qb qs" style="margin-top:8px" onclick="p('set')">${t("settings")}</button>
-<button class="qb qs" style="margin-top:4px;background:color-mix(in srgb,var(--vscode-errorForeground) 15%,transparent);color:var(--vscode-errorForeground)" onclick="p('closeAll')">${t("closeAll")}</button>
-
-<script nonce="${n()}">const v=acquireVsCodeApi();function p(t,i){v.postMessage({type:t,id:i})}<\/script>
+<script nonce="${n()}">const v=acquireVsCodeApi();function p(t,i,v2){v.postMessage({type:t,id:i,value:v2})}<\/script>
 </body></html>`;
   }
 }
