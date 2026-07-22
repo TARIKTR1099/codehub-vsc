@@ -22,7 +22,7 @@ const _ = (tr: string, en: string) => ({ tr, en });
 const T: Record<string, Record<string, string>> = {
   appName: _("CodeHub", "CodeHub"), settings: _("Ayarlar", "Settings"),
   library: _("Kütüphane", "Library"), addFromLib: _("Kütüphaneden Ekle", "Add from Library"),
-  addProfile: _("Profil Ekle", "Add Profile"), noProfiles: _("Henüz profil yok.", "No profiles yet."),
+  addProfile: _("Profil Ekle", "Add Profile"),   noProfiles: _("Henüz profil yok. + ile ekleyin veya Kütüphaneden seçin.", "No profiles yet. Tap + or add from Library."),
   created: _("Profil oluşturuldu", "Profile created"), deleted: _("Profil silindi", "Profile deleted"),
   updated: _("Profil güncellendi", "Profile updated"), closeAll: _("Tümünü Kapat", "Close All"),
   profileList: _("Profiller", "Profiles"), first: _("En üstteki", "Topmost"),
@@ -123,7 +123,8 @@ function closeProf(id: string) { const t = openTerms.get(id); if (t) { t.dispose
 function runDef() { const id = defId(); const p = findP(id); if (p) runProf(p); }
 
 async function pickProf(title: string, sk: string) {
-  const items = [{ label: `$(chevron-up) ${t("first")}`, id: "first" }, ...getP().map((p) => ({ label: `$(${p.icon||"terminal"}) ${p.name}  ${buildCmd(p)}`,description: p.shell, id: p.id }))];
+  const cur = c().get<string>(sk, "first");
+  const items = [{ label: `$(chevron-up) ${t("first")} ${cur==="first"?" \u25C8":""}`, id: "first" }, ...getP().map((p) => ({ label: `$(${p.icon||"terminal"}) ${p.name} ${cur===p.id?"\u25C8":""}`,description: `${buildCmd(p)} \u2022 ${p.shell}`, id: p.id }))];
   const pick = await vscode.window.showQuickPick(items, { placeHolder: title, matchOnDescription: true }); if (pick) c().update(sk, pick.id, vscode.ConfigurationTarget.Global);
 }
 
@@ -167,7 +168,10 @@ async function profDlg(existing?: Profile): Promise<Profile | undefined> {
 }
 
 async function pickLib(): Promise<Profile | undefined> {
-  const items = LIB.map((l) => ({ label: `$(${l.icon}) ${l.name}`, description: `${l.executable} ${l.arguments}`.trim(), detail: l.desc, lib: l }));
+  const items: any[] = [
+    { label: "AI Kodlama Araçları / AI Coding Agents", kind: vscode.QuickPickItemKind.Separator },
+    ...LIB.map((l) => ({ label: `$(${l.icon}) ${l.name}`, description: `${l.executable} ${l.arguments}`.trim(), detail: l.desc, lib: l })),
+  ];
   const pick = await vscode.window.showQuickPick(items, { placeHolder: t("searchLib"), matchOnDescription: true, matchOnDetail: true });
   return pick ? fromLib(pick.lib) : undefined;
 }
@@ -271,7 +275,7 @@ body{padding:12px;font-family:var(--vscode-font-family);font-size:var(--vscode-f
 </style></head><body>
 <div class="tb">
   <span class="ti">CodeHub</span>
-  <button class="ib" onclick="p('searchLib')" title="${t("searchLib")}">\u2795</button>
+  <button class="ib" onclick="p('searchLib')" title="${t("addFromLib")}">\u2795</button>
   <button class="ib" onclick="p('settings')" title="${t("settings")}">\u2699</button>
 </div>
 
