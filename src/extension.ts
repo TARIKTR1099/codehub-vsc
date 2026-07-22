@@ -40,6 +40,16 @@ const T: Record<string, Record<string, string>> = {
   defaultCleared: _("Varsayılan profil sıfırlandı", "Default profile cleared"),
   noDefault: _("Varsayılan yok — en üstteki kullanılır", "No default — topmost is used"),
   emptyDefault: _("Varsayılan ayarlamak için ★ tıklayın", "Tap ★ to set as default"),
+  duplicate: _("Kopyala", "Duplicate"),
+  ready: _("Hazır", "Ready"),
+  confirmCloseAllQ: _("Tüm CodeHub terminallerini kapat?", "Close all CodeHub terminals?"),
+  noDefaultSelected: _("Varsayılan seçili değil", "No default selected"),
+  runNow: _("Şimdi çalıştır", "Run now"),
+  libEmpty: _("Kütüphane boş", "Library is empty"),
+  terminalRunning: _("açık", "running"),
+  profileDuplicated: _("Profil kopyalandı: {name}", "Profile duplicated: {name}"),
+  yes: _("Evet", "Yes"),
+  no: _("Hayır", "No"),
 };
 
 function t(k: string): string {
@@ -221,6 +231,8 @@ class SidePanel implements vscode.WebviewViewProvider {
       if (m.type==="searchLib"){const l=await pickLib();if(!l){this.render();return;}const list=getP();list.push(l);setP(list);this.render();vscode.window.showInformationMessage(`${t("created")}: ${l.name}`);return;}
       if (m.type==="settings"){vscode.commands.executeCommand("workbench.action.openSettings",K);return;}
       if (m.type==="exportI"){await expProf();return;}if(m.type==="importI"){await impProf();clearInstCache();this.render();return;}
+      if (m.type==="duplicate"){const p=findP(m.id);if(!p)return;const c={...p,id:gid(),name:p.name+" (2)"};const list=getP();list.push(c);setP(list);this.render();vscode.window.showInformationMessage(t("profileDuplicated").replace("{name}",p.name));return;}
+      if (m.type === "closeAll" || m.type === "confirmCloseAll") {if(c().get<boolean>("skipConfirmations",true)){vscode.window.terminals.forEach((t)=>{if(t.name.includes("CodeHub"))t.dispose()});openTerms.clear();this.render();return;}const r=await vscode.window.showQuickPick([t("yes"),t("no")],{placeHolder:t("confirmCloseAllQ")});if(r!==t("yes"))return;vscode.window.terminals.forEach((t)=>{if(t.name.includes("CodeHub"))t.dispose()});openTerms.clear();this.render();return;}
     });
   }
 
@@ -249,6 +261,7 @@ class SidePanel implements vscode.WebviewViewProvider {
         <div class="ca">
           ${isOpen?`<button class="b b-cls" onclick="p('closeProf','${p.id}')" title="${t("close")}">\u2716</button>`:""}
           <button class="b b-star ${isDef?"on":""}" onclick="p('setDefault','${p.id}')" title="${isDef?t("defaultSet"):t("emptyDefault")}">\u2605</button>
+          <button class="b" onclick="p('duplicate','${p.id}')" title="${t("duplicate")}">\u{1F4CB}</button>
           <button class="b" onclick="p('edit','${p.id}')" title="${t("edit")}">\u270F</button>
           <button class="b b-del" onclick="p('delete','${p.id}')">\u{1F5D1}</button>
           <button class="b b-up ${first?"lim":""}" onclick="p('up','${p.id}')" ${first?"disabled":""}>▲</button>
@@ -301,8 +314,8 @@ body{padding:14px;font-family:var(--vscode-font-family);font-size:var(--vscode-f
 .emp .big{font-size:28px;opacity:.2;display:block;margin-bottom:8px}
 </style></head><body>
 <div class="tb">
-  <span class="ti">$(terminal) CodeHub</span>
-  <span class="sub">${tc>0?tc+" t":"0 t"}</span>
+  <span class="ti">CodeHub</span>
+  <span class="sub">${tc>0?tc+" "+t("terminalCount").replace("{n}",""):"0"}</span>
   <button class="ib" onclick="p('searchLib')" title="${t("addFromLib")}">\u2795</button>
   <button class="ib" onclick="p('settings')" title="${t("settings")}">\u2699</button>
 </div>
@@ -310,10 +323,10 @@ body{padding:14px;font-family:var(--vscode-font-family);font-size:var(--vscode-f
 <div class="st-bar">
   <div class="st-item"><span class="num">${list.length}</span><span class="lbl">${t("profileList")}</span></div>
   <div class="st-item"><span class="num">${tc}</span><span class="lbl">${t("terminalCount").replace("{n}","")}</span></div>
-  <div class="st-item"><span class="num">${list.filter((p)=>isInst(p.executable)).length}</span><span class="lbl">Haz\u0131r</span></div>
+  <div class="st-item"><span class="num">${list.filter((p)=>isInst(p.executable)).length}</span><span class="lbl">${t("ready")}</span></div>
 </div>
 
-${list.length > 0 ? rows : `<div class="emp"><span class="big">+</span>${t("noProfiles")}</div>`}
+${list.length > 0 ? rows : `<div class="emp"><span class="big">+</span>${t("noProfiles")}\n<span style="font-size:10px;opacity:.5">${t("addFromLib")} \u2794</span></div>`}
 
 <div style="display:flex;gap:3px;margin-top:4px">
   <button style="flex:1;padding:6px;border:1.5px dashed color-mix(in srgb,var(--vscode-foreground) 15%,transparent);border-radius:6px;cursor:pointer;font-size:11px;background:transparent;color:var(--vscode-foreground);opacity:.5;transition:opacity .1s" onclick="p('add')" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.5">+ ${t("addProfile")}</button>
@@ -321,7 +334,7 @@ ${list.length > 0 ? rows : `<div class="emp"><span class="big">+</span>${t("noPr
 </div>
 
 <div style="display:flex;gap:3px;margin-top:8px">
-  <button style="flex:1;padding:5px;border:none;border-radius:6px;cursor:pointer;font-size:10px;background:color-mix(in srgb,var(--vscode-errorForeground) 8%,transparent);color:var(--vscode-errorForeground);opacity:.6;transition:opacity .1s" onclick="p('closeAll')" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6">${t("closeAll")}</button>
+  <button style="flex:1;padding:5px;border:none;border-radius:6px;cursor:pointer;font-size:10px;background:color-mix(in srgb,var(--vscode-errorForeground) 8%,transparent);color:var(--vscode-errorForeground);opacity:.6;transition:opacity .1s" onclick="p('confirmCloseAll')" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6">${t("closeAll")}</button>
   <button style="flex:1;padding:5px;border:none;border-radius:6px;cursor:pointer;font-size:10px;background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);opacity:.6;transition:opacity .1s" onclick="p('exportI')" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6">${t("exportTitle")}</button>
   <button style="flex:1;padding:5px;border:none;border-radius:6px;cursor:pointer;font-size:10px;background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);opacity:.6;transition:opacity .1s" onclick="p('importI')" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6">${t("importTitle")}</button>
 </div>
