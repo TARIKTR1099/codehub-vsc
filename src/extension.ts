@@ -110,6 +110,7 @@ async function runProf(p: Profile) {
     const term = vscode.window.createTerminal({
       name: `${p.name} - CodeHub`, iconPath: new vscode.ThemeIcon(p.icon || "terminal"),
       location: { viewColumn: vscode.ViewColumn.One, preserveFocus: false } as const, shellPath: shellPath(p),
+      env: { CODEHUB_VSCODE: "1", CODEHUB_PROFILE: p.id, CODEHUB_PROFILE_NAME: p.name } as any,
     });
     openTerms.set(p.id, term); term.show();
     await vscode.commands.executeCommand("workbench.action.closeEditorsInOtherGroups");
