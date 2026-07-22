@@ -338,93 +338,119 @@ class Panel implements vscode.WebviewViewProvider {
     const recRows=rec.slice(0,10).map(r=>`<div class="rr"><span class="ss" onclick="p('openRecent','${esc(r.path)}')">\u{1F4C1}</span><span class="sn" onclick="p('openRecent','${esc(r.path)}')">${esc(r.name)}</span><button class="rb" onclick="p('removeRecent','${esc(r.path)}')">\u2716</button></div>`).join("");
 
     return `<!DOCTYPE html><html lang="${lang}"><head><meta charset="UTF-8"/><style>
-*{margin:0;padding:0;box-sizing:border-box}body{padding:10px;font-family:var(--vscode-font-family);font-size:var(--vscode-font-size);color:var(--vscode-foreground);line-height:1.3;overflow-x:hidden}
-.h{display:flex;align-items:center;gap:4px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid color-mix(in srgb,var(--vscode-foreground) 6%,transparent)}
-.h .hi{font-size:14px;font-weight:700;flex:1;display:flex;align-items:center;gap:4px}
-.h .hi .codicon{font-size:15px}
-.h .sub{font-size:10px;opacity:.25;margin-right:4px}
-.hb{width:22px;height:22px;border:none;border-radius:4px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--vscode-foreground);opacity:.35;transition:all .1s}
-.hb:hover{opacity:1;background:var(--vscode-toolbar-hoverBackground)}
-.st{display:flex;gap:3px;margin-bottom:6px}
-.sti{flex:1;padding:4px 5px;border-radius:4px;background:color-mix(in srgb,var(--vscode-foreground) 3%,transparent);border:1px solid color-mix(in srgb,var(--vscode-foreground) 4%,transparent);font-size:9px;text-align:center;opacity:.55}
-.sti .sn{font-size:14px;font-weight:700;display:block;opacity:.75}
-.sti .sl{opacity:.3;font-size:7px;text-transform:uppercase;letter-spacing:.3px}
-.sl{font-size:10px;font-weight:600;text-transform:uppercase;opacity:.4;margin:8px 0 3px;display:flex;align-items:center;gap:6px}
-.sl::after{content:"";flex:1;height:1px;background:color-mix(in srgb,var(--vscode-foreground) 6%,transparent)}
-.sr,.rr{display:flex;align-items:center;gap:4px;padding:4px 4px;border-radius:4px;margin:1px 0;cursor:pointer;transition:background .08s}
-.sr:hover,.rr:hover{background:var(--vscode-list-hoverBackground)}
-.ss{font-size:10px;flex-shrink:0;width:16px;text-align:center;opacity:.5}
-.sn{flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.st{font-size:9px;opacity:.3;margin-right:4px}
-.sc{font-size:8px;opacity:.4;background:color-mix(in srgb,var(--vscode-foreground) 8%,transparent);border-radius:3px;padding:1px 4px}
-.rb{width:16px;height:16px;border:none;border-radius:3px;cursor:pointer;font-size:7px;background:transparent;color:var(--vscode-foreground);opacity:.15;display:flex;align-items:center;justify-content:center}
-.rb:hover{opacity:1;color:var(--vscode-errorForeground)}
-.cr{display:flex;align-items:center;gap:3px;padding:5px 4px;border-radius:5px;margin:2px 0;border:1px solid transparent;transition:all .08s}
-.cr:hover{border-color:color-mix(in srgb,var(--vscode-foreground) 8%,transparent)}
-.cr.d{border-color:color-mix(in srgb,var(--vscode-focusBorder) 15%,transparent);background:color-mix(in srgb,var(--vscode-focusBorder) 3%,transparent)}
-.on{width:20px;height:16px;border-radius:3px;border:1px solid color-mix(in srgb,var(--vscode-foreground) 10%,transparent);background:transparent;color:var(--vscode-foreground);text-align:center;font-size:8px;font-weight:600;flex-shrink:0}
-.on:focus{border-color:var(--vscode-focusBorder);outline:none}
-.cb{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:all .1s;position:relative}
-.cb.p{background:color-mix(in srgb,var(--vscode-button-background) 10%,transparent);color:var(--vscode-button-background)}
-.cb.p:hover{background:var(--vscode-button-background);color:var(--vscode-button-foreground);transform:scale(1.05)}
-.cb.n{opacity:.15}.cb.n:hover{opacity:.3}
-.nd,.od{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%}
-.nd{background:var(--vscode-errorForeground);opacity:.4}
-.od{background:var(--vscode-testing-iconPassed)}
-.ic{font-size:14px;display:flex;align-items:center;justify-content:center}
-.icf{width:18px;height:18px;border-radius:3px;background:color-mix(in srgb,var(--vscode-button-background) 10%,transparent);color:var(--vscode-button-background);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
-.cn{flex:1;min-width:0;cursor:pointer;padding:1px 2px;border-radius:3px}
-.cn:hover{background:var(--vscode-list-hoverBackground)}
-.cn-t{font-size:11px;font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cn-s{font-size:8px;opacity:.25;display:block;margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.s{color:var(--vscode-editorMarkerNavigationWarning-background);font-size:8px}
-.ca{display:flex;gap:1px;flex-shrink:0;align-items:center}
-.b{width:16px;height:16px;border:none;border-radius:3px;cursor:pointer;font-size:7px;background:transparent;color:var(--vscode-foreground);opacity:.12;display:flex;align-items:center;justify-content:center;padding:0;transition:all .08s}
-.b:hover{opacity:1;background:var(--vscode-toolbar-hoverBackground)}
-.bd:hover{color:var(--vscode-errorForeground);opacity:1}
-.bc{opacity:.35;color:var(--vscode-testing-iconPassed)}.bc:hover{opacity:1;color:var(--vscode-errorForeground)}
-.bu.l,.bd2.l{color:var(--vscode-errorForeground);opacity:.2;cursor:default;pointer-events:none}
-.bu:not(.l):hover,.bd2:not(.l):hover{opacity:1;color:var(--vscode-testing-iconPassed)}
-.emp{padding:20px 12px;text-align:center;font-size:10px;opacity:.25;line-height:1.4}
-.emp .bi{font-size:20px;opacity:.12;display:block;margin-bottom:4px}
-.or{display:flex;align-items:center;gap:4px;font-size:9px;opacity:.4;margin:4px 0;padding:3px 4px;border-radius:3px;background:color-mix(in srgb,var(--vscode-foreground) 3%,transparent)}
-.or.on{opacity:.7;background:color-mix(in srgb,var(--vscode-testing-iconPassed) 6%,transparent)}
-.act{display:flex;gap:2px;flex-wrap:wrap;margin-top:4px}
-.act button{flex:1;min-width:60px;padding:4px 6px;border:none;border-radius:4px;cursor:pointer;font-size:9px;background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);opacity:.6;transition:opacity .1s}
-.act button:hover{opacity:1}
-.act .d{background:color-mix(in srgb,var(--vscode-errorForeground) 6%,transparent);color:var(--vscode-errorForeground)}
+:root{--radius:8px;--radius-sm:5px;--transition:all .15s cubic-bezier(.4,0,.2,1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{padding:14px;font-family:var(--vscode-font-family);font-size:var(--vscode-font-size);color:var(--vscode-foreground);line-height:1.45;overflow-x:hidden;background:var(--vscode-sideBar-background)}
+.section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;opacity:.35;margin:14px 0 6px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:color-mix(in srgb,var(--vscode-foreground) 6%,transparent)}
+/* Header */
+.head{display:flex;align-items:center;gap:3px;margin-bottom:0;padding-bottom:10px;border-bottom:1px solid color-mix(in srgb,var(--vscode-foreground) 6%,transparent)}
+.head-title{font-size:15px;font-weight:700;flex:1;display:flex;align-items:center;gap:5px;letter-spacing:-.3px}
+.head-title .codicon{font-size:16px;opacity:.65}
+.head-count{font-size:10px;opacity:.25;margin-right:2px;white-space:nowrap}
+.head-btn{width:24px;height:24px;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--vscode-foreground);opacity:.3;transition:var(--transition)}
+.head-btn:hover{opacity:1;background:var(--vscode-toolbar-hoverBackground)}
+/* Quick Stats */
+.qs{display:flex;gap:4px;margin:10px 0}
+.qs-item{flex:1;padding:6px 4px;border-radius:var(--radius-sm);background:color-mix(in srgb,var(--vscode-foreground) 3%,transparent);border:1px solid color-mix(in srgb,var(--vscode-foreground) 5%,transparent);text-align:center;transition:var(--transition)}
+.qs-item:hover{background:color-mix(in srgb,var(--vscode-foreground) 5%,transparent)}
+.qs-num{font-size:15px;font-weight:700;display:block;opacity:.75}
+.qs-lbl{display:block;font-size:7px;text-transform:uppercase;letter-spacing:.4px;opacity:.3;margin-top:1px}
+/* Status badge */
+.status-badge{display:flex;align-items:center;gap:4px;font-size:10px;opacity:.5;margin-bottom:8px;padding:4px 6px;border-radius:var(--radius-sm);background:color-mix(in srgb,var(--vscode-foreground) 2%,transparent);transition:var(--transition)}
+.status-badge.on{opacity:.85;background:color-mix(in srgb,var(--vscode-testing-iconPassed) 6%,transparent)}
+.status-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+.status-dot.go{background:var(--vscode-testing-iconPassed)}.status-dot.st{background:var(--vscode-testing-iconFailed)}
+/* Session / Recent rows */
+.s-row{display:flex;align-items:center;gap:5px;padding:5px 6px;border-radius:var(--radius-sm);margin:2px 0;cursor:pointer;transition:var(--transition)}
+.s-row:hover{background:var(--vscode-list-hoverBackground)}
+.s-icon{font-size:10px;flex-shrink:0;width:18px;text-align:center;opacity:.4}
+.s-name{flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.s-time{font-size:9px;opacity:.25;margin-right:4px}
+.s-badge{font-size:8px;opacity:.3;background:color-mix(in srgb,var(--vscode-foreground) 6%,transparent);border-radius:3px;padding:1px 5px;white-space:nowrap}
+.s-del{width:16px;height:16px;border:none;border-radius:3px;cursor:pointer;font-size:7px;background:transparent;color:var(--vscode-foreground);opacity:.1;display:flex;align-items:center;justify-content:center;transition:var(--transition)}
+.s-del:hover{opacity:1;color:var(--vscode-errorForeground)}
+/* Action buttons row */
+.act-row{display:flex;gap:3px;margin-top:4px}
+.act-btn{flex:1;padding:5px 4px;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:9px;background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);opacity:.55;transition:var(--transition);white-space:nowrap}
+.act-btn:hover{opacity:1;background:var(--vscode-toolbar-hoverBackground)}
+.act-btn.primary{background:color-mix(in srgb,var(--vscode-button-background) 15%,transparent);color:var(--vscode-button-background);opacity:.75}
+.act-btn.primary:hover{background:var(--vscode-button-background);color:var(--vscode-button-foreground);opacity:1}
+.act-btn.danger{background:color-mix(in srgb,var(--vscode-errorForeground) 6%,transparent);color:var(--vscode-errorForeground);opacity:.6}
+.act-btn.danger:hover{opacity:1}
+/* Profile card */
+.p-card{display:flex;align-items:center;gap:4px;padding:6px 6px;border-radius:var(--radius);margin:3px 0;border:1px solid color-mix(in srgb,var(--vscode-foreground) 4%,transparent);background:color-mix(in srgb,var(--vscode-foreground) 1%,transparent);transition:var(--transition)}
+.p-card:hover{border-color:color-mix(in srgb,var(--vscode-foreground) 8%,transparent);background:color-mix(in srgb,var(--vscode-foreground) 2%,transparent)}
+.p-card.def{border-color:color-mix(in srgb,var(--vscode-focusBorder) 15%,transparent);background:color-mix(in srgb,var(--vscode-focusBorder) 3%,transparent)}
+.p-order{width:22px;height:18px;border-radius:4px;border:1px solid color-mix(in srgb,var(--vscode-foreground) 8%,transparent);background:transparent;color:var(--vscode-foreground);text-align:center;font-size:9px;font-weight:600;flex-shrink:0;transition:var(--transition)}
+.p-order:focus{border-color:var(--vscode-focusBorder);outline:none;background:color-mix(in srgb,var(--vscode-focusBorder) 5%,transparent)}
+.p-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:var(--transition);position:relative}
+.p-icon.avail{background:color-mix(in srgb,var(--vscode-button-background) 10%,transparent);color:var(--vscode-button-background)}
+.p-icon.avail:hover{background:var(--vscode-button-background);color:var(--vscode-button-foreground);transform:scale(1.08)}
+.p-icon.unavail{opacity:.15}.p-icon.unavail:hover{opacity:.3}
+.p-icon .icode{font-size:15px;display:flex;align-items:center;justify-content:center}
+.p-icon .ifall{width:20px;height:20px;border-radius:4px;background:color-mix(in srgb,var(--vscode-button-background) 10%,transparent);color:var(--vscode-button-background);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.p-dot{position:absolute;top:1px;right:1px;width:6px;height:6px;border-radius:50%}.p-dot.red{background:var(--vscode-errorForeground);opacity:.4}.p-dot.green{background:var(--vscode-testing-iconPassed)}
+.p-info{flex:1;min-width:0;cursor:pointer;padding:1px 4px;border-radius:4px;transition:var(--transition)}
+.p-info:hover{background:var(--vscode-list-hoverBackground)}
+.p-name{font-size:12px;font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-cmd{font-size:9px;opacity:.25;display:block;margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-star{color:var(--vscode-editorMarkerNavigationWarning-background);font-size:9px;margin-left:2px}
+.p-actions{display:flex;gap:2px;flex-shrink:0;align-items:center}
+.p-btn{width:18px;height:18px;border:none;border-radius:4px;cursor:pointer;font-size:8px;background:transparent;color:var(--vscode-foreground);opacity:.1;display:flex;align-items:center;justify-content:center;padding:0;transition:var(--transition)}
+.p-btn:hover{opacity:1;background:var(--vscode-toolbar-hoverBackground)}
+.p-btn.del:hover{color:var(--vscode-errorForeground);opacity:1}
+.p-btn.close{opacity:.35;color:var(--vscode-testing-iconPassed)}.p-btn.close:hover{opacity:1;color:var(--vscode-errorForeground)}
+.p-btn.arr{opacity:.2}.p-btn.arr.lim{color:var(--vscode-errorForeground);opacity:.15;cursor:default;pointer-events:none}
+.p-btn.arr:not(.lim):hover{opacity:1;color:var(--vscode-testing-iconPassed)}
+/* New profile row */
+.new-row{display:flex;gap:3px;margin-top:3px}
+.new-btn{flex:1;padding:5px 4px;border:1.5px dashed color-mix(in srgb,var(--vscode-foreground) 10%,transparent);border-radius:var(--radius-sm);cursor:pointer;font-size:10px;background:transparent;color:var(--vscode-foreground);opacity:.3;transition:var(--transition)}
+.new-btn:hover{opacity:.7;border-color:color-mix(in srgb,var(--vscode-foreground) 25%,transparent)}
+.new-btn-icon{width:24px;border:1.5px dashed color-mix(in srgb,var(--vscode-foreground) 10%,transparent);border-radius:var(--radius-sm);cursor:pointer;font-size:11px;background:transparent;color:var(--vscode-foreground);opacity:.3;transition:var(--transition);display:flex;align-items:center;justify-content:center}
+.new-btn-icon:hover{opacity:.7;border-color:color-mix(in srgb,var(--vscode-foreground) 25%,transparent)}
+/* Empty state */
+.empty{padding:24px 12px;text-align:center;font-size:11px;opacity:.25;line-height:1.5}
+.empty .big{font-size:22px;opacity:.1;display:block;margin-bottom:6px;font-weight:300}
+/* Add profile inline button */
+.add-inline{width:100%;padding:8px;border:none;border-radius:var(--radius);cursor:pointer;font-size:11px;font-weight:500;background:color-mix(in srgb,var(--vscode-button-background) 6%,transparent);color:var(--vscode-button-background);opacity:.5;transition:var(--transition);margin-top:4px}
+.add-inline:hover{opacity:1;background:color-mix(in srgb,var(--vscode-button-background) 12%,transparent)}
 </style></head><body>
-<div class="h"><div class="hi"><span class="codicon codicon-terminal"></span>CodeHub</div><span class="sub">${tc>0?tc+" "+t("termCount").replace("{n}",""):""}</span>
-  <button class="hb" onclick="p('oc')" title="${t("opencode")}">\u25B6</button>
-  <button class="hb" onclick="p('addFile')" title="${t("addFile")}">\u{1F4C4}</button>
-  <button class="hb" onclick="p('addLib')" title="${t("addLib")}">\u2795</button>
-  <button class="hb" onclick="p('settings')" title="${t("set")}">\u2699</button>
+<div class="head">
+  <div class="head-title"><span class="codicon codicon-terminal"></span>CodeHub</div>
+  <span class="head-count">${tc>0?tc+' '+t("termCount").replace('{n}',''):''}</span>
+  <button class="head-btn" onclick="p('oc')" title="OpenCode">&#9654;</button>
+  <button class="head-btn" onclick="p('addFile')" title="Add file">&#128196;</button>
+  <button class="head-btn" onclick="p('addLib')" title="Library">&#10133;</button>
+  <button class="head-btn" onclick="p('settings')" title="Settings">&#9881;</button>
 </div>
-<div class="st">
-  <div class="sti"><span class="sn">${list.length}</span><span class="sl">${t("profiles")}</span></div>
-  <div class="sti"><span class="sn">${tc}</span><span class="sl">${t("termCount").replace("{n}","")}</span></div>
-  <div class="sti"><span class="sn">${list.filter(p=>isI(p.executable)).length}</span><span class="sl">${t("ready")}</span></div>
-</div>
-<div class="or ${or?"on":""}"><span class="codicon codicon-${or?"check":"globe"}" style="font-size:10px"></span>${or?t("omniRouteOn"):t("omniRouteOff")}</div>
 
-${sessRows?`<div class="sl">${t("sessions")}</div>${sessRows}<div class="act"><button onclick="p('saveSession')">$(save) ${t("sessionSave")}</button><button onclick="p('delSession')">$(trash) ${t("sessionDelete")}</button></div>`:""}
-${recRows?`<div class="sl">${t("recent")}</div>${recRows}<div class="act"><button class="d" onclick="p('clearRecent')">$(trash) ${t("recentClear")}</button></div>`:""}
+<div class="qs">
+  <div class="qs-item"><span class="qs-num">${list.length}</span><span class="qs-lbl">${t("profiles")}</span></div>
+  <div class="qs-item"><span class="qs-num">${tc}</span><span class="qs-lbl">${t("termCount").replace('{n}','')}</span></div>
+  <div class="qs-item"><span class="qs-num">${list.filter(p=>isI(p.executable)).length}</span><span class="qs-lbl">Ready</span></div>
+</div>
 
-<div class="sl">${t("profiles")}</div>
-${list.length>0?rows:`<div class="emp"><span class="bi">+</span>${t("noP")}</div>`}
-<div style="display:flex;gap:3px;margin-top:3px">
-  <button style="flex:1;padding:4px;border:1.5px dashed color-mix(in srgb,var(--vscode-foreground) 10%,transparent);border-radius:4px;cursor:pointer;font-size:9px;background:transparent;color:var(--vscode-foreground);opacity:.35;transition:opacity .1s" onclick="p('add')" onmouseover="this.style.opacity=.7" onmouseout="this.style.opacity=.35">+ ${t("addP")}</button>
-  <button style="width:24px;border:1.5px dashed color-mix(in srgb,var(--vscode-foreground) 10%,transparent);border-radius:4px;cursor:pointer;font-size:11px;background:transparent;color:var(--vscode-foreground);opacity:.35;transition:opacity .1s;display:flex;align-items:center;justify-content:center" onclick="p('addLib')" onmouseover="this.style.opacity=.7" onmouseout="this.style.opacity=.35">\u{1F4CB}</button>
+<div class="status-badge ${or?"on":""}"><span class="status-dot ${or?"go":"st"}"></span>${or?'OmniRoute running':'OmniRoute offline'}</div>
+
+${sess.length>0?`<div class="section-title">Sessions</div>${sess.slice(-5).reverse().map(s=>`<div class="s-row" onclick="p('restoreSession')"><span class="s-icon">&#9654;</span><span class="s-name">${esc(s.name)}</span><span class="s-time">${esc(s.time)}</span><span class="s-badge">${s.profiles.length}t</span></div>`).join('')}
+<div class="act-row"><button class="act-btn primary" onclick="p('saveSession')">&#128190; Save</button><button class="act-btn danger" onclick="p('delSession')">&#128465; Delete</button></div>`:''}
+
+${rec.length>0?`<div class="section-title">Recent</div>${rec.slice(0,8).map(r=>`<div class="s-row"><span class="s-icon" onclick="p('openRecent','${esc(r.path)}')">&#128193;</span><span class="s-name" onclick="p('openRecent','${esc(r.path)}')">${esc(r.name)}</span><button class="s-del" onclick="p('removeRecent','${esc(r.path)}')">&#10006;</button></div>`).join('')}
+<div class="act-row"><button class="act-btn danger" onclick="p('clearRecent')">&#128465; Clear All</button></div>`:''}
+
+<div class="section-title">${t("profiles")}</div>
+${list.length>0?rows:`<div class="empty"><span class="big">+</span>${t("noP")}</div>`}
+
+<div class="new-row">
+  <button class="new-btn" onclick="p('add')">+ ${t("addP")}</button>
+  <button class="new-btn-icon" onclick="p('addLib')" title="${t("addLib")}">&#128203;</button>
 </div>
-<div class="act" style="margin-top:6px">
-  <button onclick="p('saveSession')">$(save) ${t("sessionSave")}</button>
-  <button onclick="p('restoreSession')">$(history) ${t("sessionRestore")}</button>
-  <button class="d" onclick="p('closeAll')">$(trash) ${t("closeAll")}</button>
-</div>
-<div class="act" style="margin-top:3px">
-  <button onclick="p('exp')">$(save) ${t("exportT")}</button>
-  <button onclick="p('imp')">$(folder) ${t("importT")}</button>
-</div>
+
+<button class="add-inline" onclick="p('exp')">&#128190; ${t("exportT")} / ${t("importT")}</button>
+
+<div class="act-row"><button class="act-btn primary" onclick="p('saveSession')">&#128190; ${t("sessionSave")}</button><button class="act-btn" onclick="p('restoreSession')">&#128213; ${t("sessionRestore")}</button><button class="act-btn danger" onclick="p('closeAll')">&#128465; ${t("closeAll")}</button></div>
+
 <script nonce="${n()}">const v=acquireVsCodeApi();function p(t,i,v2){v.postMessage({type:t,id:i,value:v2})}<\/script>
 </body></html>`;
   }
