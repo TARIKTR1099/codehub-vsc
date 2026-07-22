@@ -325,35 +325,35 @@ class SidePanel implements vscode.WebviewViewProvider {
 
     return `<!DOCTYPE html><html lang="${lang}"><head><meta charset="UTF-8"/><style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{padding:10px;font-family:var(--vscode-font-family);font-size:var(--vscode-font-size);color:var(--vscode-foreground)}
-.h{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;margin-bottom:8px}
-.h .s{font-size:10px;font-weight:400;opacity:.4;margin-left:auto}
-.q{display:flex;gap:4px;margin-bottom:6px}
-.qb{flex:1;padding:6px 4px;border:none;border-radius:4px;cursor:pointer;font-size:11px;text-align:center;background:var(--vscode-button-background);color:var(--vscode-button-foreground);font-weight:500}
+body{padding:12px;font-family:var(--vscode-font-family);font-size:var(--vscode-font-size);color:var(--vscode-foreground);line-height:1.5}
+.h{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.h .s{font-size:12px;font-weight:400;opacity:.5;margin-left:auto}
+.q{display:flex;gap:6px;margin-bottom:8px}
+.qb{flex:1;padding:10px 8px;border:none;border-radius:6px;cursor:pointer;font-size:13px;text-align:center;background:var(--vscode-button-background);color:var(--vscode-button-foreground);font-weight:500}
 .qb:hover{opacity:.85}
 .qs{background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground)}
-.sl{font-size:10px;text-transform:uppercase;opacity:.4;letter-spacing:.5px;margin:8px 0 4px;font-weight:600}
-.ac{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
-.acb{padding:5px 8px;border:none;border-radius:4px;cursor:pointer;font-size:10px;background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);flex:1;min-width:80px;text-align:center}
+.sl{font-size:12px;text-transform:uppercase;opacity:.5;letter-spacing:.5px;margin:10px 0 6px;font-weight:600}
+.ac{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.acb{padding:8px 10px;border:none;border-radius:6px;cursor:pointer;font-size:12px;background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);flex:1;min-width:100px;text-align:center}
 .acb:hover{opacity:.85}
-.acb .lbl{font-size:9px;opacity:.6;display:block;margin-bottom:2px}
-.pr{display:flex;align-items:center;gap:3px;padding:5px 6px;border-radius:5px;margin:2px 0;transition:background .1s}
+.acb .lbl{font-size:10px;opacity:.6;display:block;margin-bottom:3px}
+.pr{display:flex;align-items:center;gap:4px;padding:8px 8px;border-radius:6px;margin:3px 0;transition:background .1s}
 .pr:hover{background:var(--vscode-list-hoverBackground)}
 .pr.d{background:color-mix(in srgb,var(--vscode-focusBorder) 8%,transparent);border:1px solid color-mix(in srgb,var(--vscode-focusBorder) 20%,transparent)}
-.pi{display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;min-width:0}
-.ti{width:18px;height:18px;font-size:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:.8}
-.si{width:20px;height:20px;border-radius:4px;background:var(--vscode-badge-background);color:var(--vscode-badge-foreground);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
-.pn{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.mc{width:6px;height:6px;border-radius:3px;flex-shrink:0}
+.pi{display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0}
+.ti{width:22px;height:22px;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:.9}
+.si{width:24px;height:24px;border-radius:5px;background:var(--vscode-badge-background);color:var(--vscode-badge-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.pn{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.mc{width:8px;height:8px;border-radius:4px;flex-shrink:0}
 .mc-c{background:var(--vscode-testing-iconPassed)}
 .mc-d{background:var(--vscode-testing-iconFailed)}
 .mc-v{background:var(--vscode-testing-iconQueued)}
-.pa{display:flex;gap:2px;flex-shrink:0}
-.b{width:18px;height:18px;border:none;border-radius:3px;cursor:pointer;font-size:9px;background:transparent;color:var(--vscode-foreground);opacity:.3;display:flex;align-items:center;justify-content:center;padding:0;transition:all .1s}
-.b:hover{opacity:1;background:var(--vscode-toolbar-hoverBackground);transform:scale(1.1)}
+.pa{display:flex;gap:4px;flex-shrink:0}
+.b{width:24px;height:24px;border:none;border-radius:4px;cursor:pointer;font-size:11px;background:transparent;color:var(--vscode-foreground);opacity:.4;display:flex;align-items:center;justify-content:center;padding:0;transition:all .1s}
+.b:hover{opacity:1;background:var(--vscode-toolbar-hoverBackground);transform:scale(1.15)}
 .b.d:hover{color:var(--vscode-errorForeground)}
-.st{font-size:10px;opacity:.3}
-.emp{padding:16px;text-align:center;font-size:11px;opacity:.4;line-height:1.5}
+.st{font-size:12px;opacity:.4}
+.emp{padding:20px;text-align:center;font-size:13px;opacity:.5;line-height:1.6}
 .acb-a{background:color-mix(in srgb,var(--vscode-button-background) 20%,transparent);color:var(--vscode-foreground)}
 </style></head><body>
 <div class="h">CodeHub <span class="s">${tc > 0 ? tt("terminalCount",{n:tc}) : ''}</span></div>
