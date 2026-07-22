@@ -138,7 +138,25 @@ async function expProf() {
 async function impProf() {
   const uri = await vscode.window.showOpenDialog({ filters: { "CodeHub Profiles": ["json"] }, canSelectMany: false });
   if (!uri || !uri.length) return;
-  try { const d = JSON.parse(new TextDecoder().decode(await vscode.workspace.fs.readFile(uri[0]))) as Profile[]; if (!Array.isArray(d)) throw Error(); d.forEach((p) => { if (!p.id) p.id = gid(); }); setP(d); vscode.window.showInformationMessage(`${t("imported")} (${d.length})`); } catch { vscode.window.showErrorMessage("Import failed: invalid file"); }
+  try {
+    const d = JSON.parse(new TextDecoder().decode(await vscode.workspace.fs.readFile(uri[0])));
+    let profiles: Profile[];
+    if (Array.isArray(d)) {
+      profiles = d.map((p: any) => {
+        if (!p.id) p.id = gid();
+        if (!p.executable && p.commands && Array.isArray(p.commands) && p.commands.length > 0) {
+          const parts = p.commands[0].split(" ");
+          p.executable = parts[0];
+          p.arguments = parts.slice(1).join(" ");
+        }
+        if (!p.executable) p.executable = "opencode";
+        if (!p.arguments) p.arguments = "";
+        return p as Profile;
+      });
+    } else throw Error();
+    setP(profiles);
+    vscode.window.showInformationMessage(`${t("imported")} (${profiles.length})`);
+  } catch { vscode.window.showErrorMessage("Import failed: invalid file"); }
 }
 
 // ── Dialogs ──
