@@ -13,7 +13,7 @@ interface Profile {
 interface LibEntry {
   name: string; icon: string; executable: string; arguments: string;
   shell: Profile["shell"]; category: string; checkCommand?: string; desc: string;
-  isDesktop?: boolean;
+  isDesktop?: boolean; isOpencode?: boolean;
 }
 
 const _ = (tr: string, en: string) => ({ tr, en });
@@ -50,8 +50,11 @@ const T: Record<string, Record<string, string>> = {
   cliOpt: _("Tam terminal", "Full terminal"),
   vsOpt: _("VSCode terminal", "VSCode terminal"),
   deskOpt: _("Desktop panel", "Desktop panel"),
-  skipField: _("Atla (değiştirme)", "Skip (keep)"),
-  changeOpenIn: _("Açılış şeklini değiştir", "Change open mode"),
+  addFile: _("Dosya ekle", "Add file"),
+  opencodeLaunch: _("OpenCode başlatılıyor...", "Launching OpenCode..."),
+  serverWait: _("OpenCode sunucu başlatılıyor...", "Starting OpenCode server..."),
+  serverErr: _("OpenCode CLI bulunamadı", "OpenCode CLI not found"),
+  fileAdded: _("Dosya eklendi", "File added"),
 };
 
 function t(k: string): string {
@@ -71,20 +74,20 @@ function realDefId(): string { return defId()||topId(); }
 // ── Library ──
 
 const LIB: LibEntry[] = [
-  { name: "Claude Code", icon: "comment-discussion", executable: "claude", arguments: "", shell: "cmd", category: "ai", checkCommand: "claude --version", desc: "Anthropic AI coding agent" },
-  { name: "OpenCode CLI", icon: "terminal", executable: "opencode", arguments: "", shell: "cmd", category: "ai", checkCommand: "opencode --version", desc: "Multi-provider AI coding agent CLI" },
+  { name: "OpenCode CLI", icon: "terminal", executable: "opencode", arguments: "--port", shell: "cmd", category: "ai", isOpencode: true, desc: "OpenCode AI CLI (resmi)" },
   { name: "OpenCode Desktop", icon: "browser", executable: "opencode", arguments: "", shell: "cmd", category: "ai", isDesktop: true, desc: "OpenCode web panel (iframe)" },
-  { name: "OpenCode VSCode", icon: "terminal-powershell", executable: "opencode", arguments: "", shell: "cmd", category: "ai", desc: "OpenCode VS Code terminal panel" },
+  { name: "OpenCode VSCode", icon: "terminal-powershell", executable: "opencode", arguments: "", shell: "cmd", category: "ai", desc: "OpenCode VS Code terminal" },
+  { name: "Claude Code", icon: "comment-discussion", executable: "claude", arguments: "", shell: "cmd", category: "ai", checkCommand: "claude --version", desc: "Anthropic AI coding agent" },
   { name: "Codex CLI", icon: "symbol-ruler", executable: "codex", arguments: "", shell: "cmd", category: "ai", checkCommand: "codex --version", desc: "OpenAI coding agent CLI" },
   { name: "Kilo CLI", icon: "terminal", executable: "kilo", arguments: "", shell: "cmd", category: "ai", checkCommand: "kilo --version", desc: "500+ model AI agent CLI" },
   { name: "Gemini CLI", icon: "sparkle", executable: "gemini", arguments: "", shell: "cmd", category: "ai", checkCommand: "gemini --version", desc: "Google Gemini CLI" },
   { name: "Aider", icon: "tools", executable: "aider", arguments: "--model sonnet", shell: "cmd", category: "ai", checkCommand: "aider --version", desc: "AI pair programming CLI" },
-  { name: "GitHub Copilot CLI", icon: "github", executable: "copilot", arguments: "", shell: "cmd", category: "ai", checkCommand: "copilot --version", desc: "GitHub Copilot in your terminal" },
+  { name: "GitHub Copilot CLI", icon: "github", executable: "copilot", arguments: "", shell: "cmd", category: "ai", checkCommand: "copilot --version", desc: "GitHub Copilot in terminal" },
   { name: "Amazon Q", icon: "cloud", executable: "q", arguments: "", shell: "cmd", category: "ai", checkCommand: "q --version", desc: "AWS AI coding agent CLI" },
   { name: "Goose", icon: "star", executable: "goose", arguments: "", shell: "cmd", category: "ai", checkCommand: "goose --version", desc: "Block AI coding agent" },
   { name: "Kiro CLI", icon: "terminal", executable: "kiro-cli", arguments: "chat", shell: "cmd", category: "ai", checkCommand: "kiro-cli --version", desc: "Kiro interactive AI CLI" },
-  { name: "Cline", icon: "terminal", executable: "cline", arguments: "", shell: "cmd", category: "ai", desc: "VS Code AI coding agent (Cline)" },
-  { name: "Roo Code", icon: "terminal", executable: "roo", arguments: "", shell: "cmd", category: "ai", desc: "VS Code AI coding agent (Roo)" },
+  { name: "Cline", icon: "terminal", executable: "cline", arguments: "", shell: "cmd", category: "ai", desc: "VS Code AI coding agent" },
+  { name: "Roo Code", icon: "terminal", executable: "roo", arguments: "", shell: "cmd", category: "ai", desc: "VS Code AI coding agent" },
 ];
 
 function fromLib(l: LibEntry): Profile {
@@ -109,23 +112,91 @@ function clearInstCache(){_instCache.clear();}
 
 const openTerms = new Map<string,vscode.Terminal>();
 
+// ── Official OpenCode Terminal (replicating SDK behavior) ──
+
+async function openOpencodeTerminal(ctx: vscode.ExtensionContext) {
+  const existing = vscode.window.terminals.find((t) => t.name === "opencode");
+  if (existing) { existing.show(); return; }
+  const port = Math.floor(Math.random() * (65535 - 16384 + 1)) + 16384;
+  const term = vscode.window.createTerminal({
+    name: "opencode",
+    iconPath: {
+      light: vscode.Uri.file(ctx.asAbsolutePath("media/mark-dark.svg")),
+      dark: vscode.Uri.file(ctx.asAbsolutePath("media/mark-light.svg")),
+    },
+    location: { viewColumn: vscode.ViewColumn.Beside, preserveFocus: false },
+    env: { _EXTENSION_OPENCODE_PORT: port.toString(), OPENCODE_CALLER: "vscode" },
+  });
+  term.show();
+  term.sendText(`opencode --port ${port}`);
+  // Track this terminal
+  openTerms.set("opencode-cli", term);
+  const d = vscode.window.onDidCloseTerminal((t) => { if (t === term) { openTerms.delete("opencode-cli"); d.dispose(); } });
+  // Wait for server and add active file reference
+  let tries = 10; let connected = false;
+  do {
+    await new Promise((r) => setTimeout(r, 200));
+    try { const r = await fetch(`http://localhost:${port}/app`); if (r.ok) { connected = true; break; } } catch {}
+    tries--;
+  } while (tries > 0);
+  if (connected) {
+    const ref = getActiveFileRef();
+    if (ref) { await appendPrompt(port, ref); term.show(); }
+  }
+}
+
+async function appendPrompt(port: number, text: string) {
+  try { await fetch(`http://localhost:${port}/tui/append-prompt`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) }); } catch {}
+}
+
+function getActiveFileRef(): string | undefined {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) return;
+  const doc = editor.document;
+  const wf = vscode.workspace.getWorkspaceFolder(doc.uri);
+  if (!wf) return;
+  const rel = vscode.workspace.asRelativePath(doc.uri);
+  let ref = `@${rel}`;
+  const sel = editor.selection;
+  if (!sel.isEmpty) {
+    const s = sel.start.line + 1, e = sel.end.line + 1;
+    ref += s === e ? `#L${s}` : `#L${s}-${e}`;
+  }
+  return ref;
+}
+
+async function addFileToOpencode() {
+  const term = vscode.window.terminals.find((t) => t.name === "opencode");
+  if (!term) return;
+  const ref = getActiveFileRef();
+  if (!ref) return;
+  try {
+    const port = (term as any).creationOptions?.env?.["_EXTENSION_OPENCODE_PORT"];
+    if (port) await appendPrompt(parseInt(port), ref);
+    else term.sendText(ref, false);
+    term.show();
+    vscode.window.showInformationMessage(t("fileAdded"));
+  } catch {}
+}
+
+// ── Generic Profile Runner ──
+
 async function runProf(p: Profile) {
   const existing = openTerms.get(p.id);
-  if(existing&&c().get<boolean>("reuseTerminal",true)&&!c().get<boolean>("alwaysNewTerminal",false)){existing.show(true);return;}
-  try{
+  if (existing && c().get<boolean>("reuseTerminal", true) && !c().get<boolean>("alwaysNewTerminal", false)) { existing.show(true); return; }
+  try {
     const opts: vscode.TerminalOptions = {
-      name:`${p.name} - CodeHub`,iconPath:new vscode.ThemeIcon(p.icon||"terminal"),
-      location:{viewColumn:vscode.ViewColumn.One,preserveFocus:false}as const,shellPath:shellPath(p),
-      env:{CODEHUB_VSCODE:"1",CODEHUB_PROFILE:p.id,CODEHUB_PROFILE_NAME:p.name}as any,
+      name: `${p.name} - CodeHub`, iconPath: new vscode.ThemeIcon(p.icon || "terminal"),
+      location: { viewColumn: vscode.ViewColumn.One, preserveFocus: false } as const, shellPath: shellPath(p),
+      env: { CODEHUB_VSCODE: "1", CODEHUB_PROFILE: p.id } as any,
     };
-    if(p.cwd)opts.cwd=vscode.Uri.file(p.cwd);
-    const term=vscode.window.createTerminal(opts);
-    openTerms.set(p.id,term);term.show();
+    if (p.cwd) opts.cwd = vscode.Uri.file(p.cwd);
+    const term = vscode.window.createTerminal(opts); openTerms.set(p.id, term); term.show();
     await vscode.commands.executeCommand("workbench.action.closeEditorsInOtherGroups");
-    const cmd=buildCmd(p);
-    if(cmd.trim())setTimeout(()=>term.sendText(cmd.trim(),true),800);
-    const d=vscode.window.onDidCloseTerminal((t)=>{if(t===term){openTerms.delete(p.id);d.dispose();}});
-  }catch(e){vscode.window.showErrorMessage(`CodeHub: ${p.name} başlatılamadı`);}
+    const cmd = buildCmd(p);
+    if (cmd.trim()) setTimeout(() => term.sendText(cmd.trim(), true), 800);
+    const d = vscode.window.onDidCloseTerminal((t) => { if (t === term) { openTerms.delete(p.id); d.dispose(); } });
+  } catch (e) { vscode.window.showErrorMessage(`CodeHub: ${p.name} başlatılamadı`); }
 }
 
 function closeProf(id:string){const t=openTerms.get(id);if(t){t.dispose();openTerms.delete(id);}}
@@ -137,7 +208,7 @@ async function pickProf(title:string,sk:string){
   const pick=await vscode.window.showQuickPick(items,{placeHolder:title,matchOnDescription:true});if(pick)c().update(sk,pick.id,vscode.ConfigurationTarget.Global);
 }
 
-// ── Desktop Panel (opencode server + iframe) ──
+// ── Desktop Panel ──
 
 let desktopPanel: vscode.WebviewPanel|undefined;
 const srvPorts = new Set<number>(); const SRV = "oc-server";
@@ -150,14 +221,14 @@ function startSrv(port:number){
 }
 async function openDesktop(ctx:vscode.ExtensionContext){
   if(desktopPanel){desktopPanel.reveal(vscode.ViewColumn.Active,false);return;}
-  if(!isOC()){const r=await vscode.window.showErrorMessage(`${getOC()} ${t("exec")}`);if(r)vscode.commands.executeCommand("workbench.action.openSettings",`${K}.opencodePath`);return;}
+  if(!isOC()){vscode.window.showWarningMessage(t("serverErr"));return;}
   desktopPanel=vscode.window.createWebviewPanel("ch.desktop","OpenCode Desktop",vscode.ViewColumn.Beside,{enableScripts:true,retainContextWhenHidden:true});
-  desktopPanel.webview.html=`<html><body style="display:flex;align-items:center;justify-content:center;height:100%"><div style="text-align:center"><div class="sp" style="width:28px;height:28px;border:3px solid rgba(128,128,128,.3);border-top-color:var(--vscode-foreground);border-radius:50%;animation:spin .8s infinite;margin:0 auto 12px"></div><div style="opacity:.6">${t("created")}...</div></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></body></html>`;
+  desktopPanel.webview.html=`<html><body style="display:flex;align-items:center;justify-content:center;height:100%"><div style="text-align:center"><div class="sp" style="width:28px;height:28px;border:3px solid rgba(128,128,128,.3);border-top-color:var(--vscode-foreground);border-radius:50%;animation:spin .8s infinite;margin:0 auto 12px"></div><div style="opacity:.6">${t("serverWait")}</div></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></body></html>`;
   desktopPanel.onDidDispose(()=>{desktopPanel=undefined;});
   const port=Math.floor(Math.random()*50000)+1024;startSrv(port);
   for(let i=0;i<40;i++){try{const r=await fetch(`http://localhost:${port}/app`);if(r.ok||r.status===404)break}catch{}try{const r=await fetch(`http://localhost:${port}`);if(r.ok||r.status===404)break}catch{}await new Promise((r)=>setTimeout(r,500));}
   if(!desktopPanel)return;
-  desktopPanel.webview.html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/><meta http-equiv="Content-Security-Policy" content="default-src 'none';style-src 'unsafe-inline';frame-src http://localhost:${port} https:"><style>*{margin:0;padding:0}html,body{height:100%;overflow:hidden}iframe{width:100%;height:100%;border:none}</style></head><body><iframe src="http://localhost:${port}" allow="clipboard-read;clipboard-write"></iframe></body></html>`;
+  desktopPanel.webview.html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/><meta http-equiv="Content-Security-Policy" content="default-src 'none';style-src 'unsafe-inline';frame-src http://localhost:${port} https:"><style>*{margin:0;padding:0}html,body{height:100%;overflow:hidden}iframe{width:100%;height:100%;border:none}</style></head><body><iframe src="http://localhost:${port}"></iframe></body></html>`;
 }
 
 // ── Import/Export ──
@@ -184,7 +255,7 @@ async function impProf() {
 
 // ── Dialogs ──
 
-async function pickIcon(existing?:string): Promise<string|undefined>{
+async function pickIcon(existing?:string):Promise<string|undefined>{
   const ch=await vscode.window.showQuickPick([
     {label:`$(close) ${t("pickIconTitle")}`,id:"none"},
     {label:`$(symbol-color) ${t("searchLibIcon")}`,id:"theme"},
@@ -194,17 +265,11 @@ async function pickIcon(existing?:string): Promise<string|undefined>{
   const pick=await vscode.window.showQuickPick(icons.map((i)=>({label:`$(${i}) ${i}`,id:i})),{placeHolder:t("searchLib")});return pick?.id;
 }
 
-async function profDlg(existing?:Profile): Promise<Profile|undefined>{
-  const isEdit=!!existing;
-  // Name: always show, pre-filled for edit
-  const name=await vscode.window.showInputBox({prompt:t("profileName"),value:existing?.name||"",placeHolder:"Claude Code",ignoreFocusOut:true});if(name===undefined)return;
-  // Icon: skip with Enter
+async function profDlg(existing?:Profile):Promise<Profile|undefined>{
+  const name=await vscode.window.showInputBox({prompt:t("profileName"),value:existing?.name||"",placeHolder:"OpenCode CLI",ignoreFocusOut:true});if(name===undefined)return;
   const icon=await pickIcon(existing?.icon);if(icon===undefined)return;
-  // Executable
-  const exec=await vscode.window.showInputBox({prompt:t("exec"),value:existing?.executable||"",placeHolder:"claude, node, git",ignoreFocusOut:true});if(exec===undefined)return;
-  // Arguments
-  const args=await vscode.window.showInputBox({prompt:t("args"),value:existing?.arguments||"",placeHolder:"--model sonnet, run dev",ignoreFocusOut:true});if(args===undefined)return;
-  // Shell
+  const exec=await vscode.window.showInputBox({prompt:t("exec"),value:existing?.executable||"",placeHolder:"opencode, claude, node",ignoreFocusOut:true});if(exec===undefined)return;
+  const args=await vscode.window.showInputBox({prompt:t("args"),value:existing?.arguments||"",placeHolder:"--port 8080, run dev",ignoreFocusOut:true});if(args===undefined)return;
   const sp=await vscode.window.showQuickPick([
     {label:"$(terminal-cmd) CMD",id:"cmd"},{label:"$(terminal-powershell) PowerShell",id:"powershell"},
     {label:"$(terminal-linux) WSL",id:"wsl"},{label:"$(terminal-bash) Bash",id:"bash"},
@@ -212,19 +277,14 @@ async function profDlg(existing?:Profile): Promise<Profile|undefined>{
   ],{placeHolder:t("shellType"),ignoreFocusOut:true});if(!sp)return;
   const shell=sp.id as Profile["shell"];let shellPath:string|undefined;
   if(shell==="custom"){const p=await vscode.window.showInputBox({prompt:"Custom shell path",value:existing?.shellPath||"",ignoreFocusOut:true});if(p===undefined)return;shellPath=p||undefined;}
-  // Working directory (optional)
-  const cwd=await vscode.window.showInputBox({prompt:t("dir")+" (opsiyonel)",value:existing?.cwd||"",placeHolder:"C:\\Projects\\my-app",ignoreFocusOut:true});if(cwd===undefined)return;
-  // Open location: this is what user can quickly change without re-entering everything
+  const cwd=await vscode.window.showInputBox({prompt:t("dir")+" (opsiyonel)",value:existing?.cwd||"",placeHolder:"C:\\Projects",ignoreFocusOut:true});if(cwd===undefined)return;
   const openPick=await vscode.window.showQuickPick([
-    {label:`$(terminal) ${t("cliOpt")}`,desc:"",id:"cli"},
-    {label:`$(terminal-powershell) ${t("vsOpt")}`,desc:"",id:"vscode"},
-    {label:`$(browser) ${t("deskOpt")}`,desc:"",id:"desktop"},
-  ],{placeHolder:t("openInEdit")});if(!openPick)return;
-  const openIn=openPick.id;
+    {label:`$(terminal) ${t("cliOpt")}`,id:"cli"},{label:`$(terminal-powershell) ${t("vsOpt")}`,id:"vscode"},{label:`$(browser) ${t("deskOpt")}`,id:"desktop"},
+  ],{placeHolder:t("openInEdit"),ignoreFocusOut:true});if(!openPick)return;
   return{id:existing?.id||gid(),name,icon:icon||undefined,executable:exec,arguments:args,shell,shellPath,cwd:cwd||undefined};
 }
 
-async function pickLib(): Promise<Profile|undefined>{
+async function pickLib():Promise<Profile|undefined>{
   const items:any[]=[
     {label:"AI Kodlama Araçları / AI Coding Agents",kind:vscode.QuickPickItemKind.Separator},
     ...LIB.map((l)=>({label:`$(${l.icon}) ${l.name}`,description:`${l.executable} ${l.arguments}`.trim(),detail:l.desc,lib:l})),
@@ -241,15 +301,25 @@ class SidePanel implements vscode.WebviewViewProvider {
 
   resolveWebviewView(vw:vscode.WebviewView){this.v=vw;vw.webview.options={enableScripts:true};this.render();vw.onDidDispose(()=>{this.v=undefined;});
     vw.webview.onDidReceiveMessage(async(m)=>{
-      if(m.type==="run"||m.type==="runCLI"){const p=findP(m.id);if(p)await runProf(p);this.render();return;}
-      if(m.type==="runDesktop"){const p=findP(m.id);if(p){c().update("defaultProfile",m.id,vscode.ConfigurationTarget.Global);openDesktop(this.ctx);}this.render();return;}
-      if(m.type==="runVSC"){const p=findP(m.id);if(p)await runProf({...p});this.render();return;}
+      if(m.type==="run"){const p=findP(m.id);if(p)await runProf(p);this.render();return;}
+      if(m.type==="runOC"){
+        const oc=await vscode.window.showQuickPick([
+          {label:"$(terminal) OpenCode CLI (yan panel)",id:"cli"},
+          {label:"$(browser) OpenCode Desktop (iframe)",id:"desktop"},
+          {label:"$(terminal-powershell) OpenCode VSCode (panel)",id:"vscode"},
+        ],{placeHolder:t("opencodeLaunch")});
+        if(!oc)return;
+        if(oc.id==="cli"){await openOpencodeTerminal(this.ctx);}
+        else if(oc.id==="desktop"){openDesktop(this.ctx);}
+        else if(oc.id==="vscode"){const term=vscode.window.createTerminal({name:"opencode",iconPath:new vscode.ThemeIcon("terminal"),shellPath:"cmd.exe"});term.show();term.sendText("opencode");}
+        this.render();return;
+      }
       if(m.type==="closeProf"){closeProf(m.id);this.render();return;}
       if(m.type==="closeAll"||m.type==="confirmCloseAll"){
         if(!c().get<boolean>("skipConfirmations",true)){const r=await vscode.window.showQuickPick([t("yes"),t("no")],{placeHolder:t("confirmCloseAllQ")});if(r!==t("yes")){this.render();return;}}
-        vscode.window.terminals.forEach((t)=>{if(t.name.includes("CodeHub"))t.dispose()});openTerms.clear();this.render();return;
+        vscode.window.terminals.forEach((t)=>{if(t.name.includes("CodeHub")||t.name==="opencode"||t.name==="oc-server")t.dispose()});openTerms.clear();srvPorts.clear();this.render();return;
       }
-      if(m.type==="addLib"){const l=await pickLib();if(!l){this.render();return;}if(l.name==="OpenCode Desktop"){l.name="OpenCode Desktop";}const list=getP();list.push(l);setP(list);this.render();vscode.window.showInformationMessage(`${t("created")}: ${l.name}`);return;}
+      if(m.type==="addLib"){const l=await pickLib();if(!l){this.render();return;}const list=getP();list.push(l);setP(list);this.render();vscode.window.showInformationMessage(`${t("created")}: ${l.name}`);return;}
       if(m.type==="add"){const r=await profDlg();if(!r){this.render();return;}const list=getP();list.push(r);setP(list);this.render();vscode.window.showInformationMessage(`${t("created")}: ${r.name}`);return;}
       if(m.type==="edit"){const list=getP();const i=list.findIndex((x)=>x.id===m.id);if(i<0)return;const u=await profDlg(list[i]);if(!u){this.render();return;}list[i]=u;setP(list);this.render();vscode.window.showInformationMessage(t("updated"));return;}
       if(m.type==="delete"){const p=findP(m.id);if(!p)return;setP(getP().filter((x)=>x.id!==m.id));if(c().get<string>("defaultProfile","")===m.id)c().update("defaultProfile","",vscode.ConfigurationTarget.Global);this.render();vscode.window.showInformationMessage(`${t("deleted")}: ${p.name}`);return;}
@@ -261,6 +331,7 @@ class SidePanel implements vscode.WebviewViewProvider {
       if(m.type==="exportI"){await expProf();return;}if(m.type==="importI"){await impProf();clearInstCache();this.render();return;}
       if(m.type==="duplicate"){const p=findP(m.id);if(!p)return;const c2={...p,id:gid(),name:p.name+" (2)"};const list=getP();list.push(c2);setP(list);this.render();vscode.window.showInformationMessage(t("profileDuplicated").replace("{name}",p.name));return;}
       if(m.type==="openDesktop"){openDesktop(this.ctx);return;}
+      if(m.type==="addFile"){addFileToOpencode();return;}
     });
   }
 
@@ -268,11 +339,10 @@ class SidePanel implements vscode.WebviewViewProvider {
 
   private html():string{
     const list=getP();const lang=c().get<string>("language","tr")==="en"?"en":"tr";
-    const tc=vscode.window.terminals.filter((t)=>t.name.includes("CodeHub")).length;
+    const tc=vscode.window.terminals.filter((t)=>t.name.includes("CodeHub")||t.name==="opencode"||t.name==="oc-server").length;
     const def=c().get<string>("defaultProfile","");
     const n=()=>{const c="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";let r="";for(let i=0;i<32;i++)r+=c[Math.floor(Math.random()*c.length)];return r;};
     const esc=(s:string)=>s.replace(/[&<>"']/g,(m)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m]||m);
-
     const rows=list.map((p,idx)=>{
       const isDef=p.id===def;const first=idx===0;const last=idx===list.length-1;
       const isOpen=openTerms.has(p.id);const installed=isInst(p.executable);
@@ -286,10 +356,10 @@ class SidePanel implements vscode.WebviewViewProvider {
           <span class="cn-s">${esc(buildCmd(p))}</span>
         </div>
         <div class="ca">
-          ${isOpen?`<button class="b b-cls" onclick="p('closeProf','${p.id}')" title="${t("close")}">\u2716</button>`:""}
-          <button class="b b-star ${isDef?"on":""}" onclick="p('setDefault','${p.id}')" title="${t("emptyDefault")}">\u2605</button>
-          <button class="b" onclick="p('duplicate','${p.id}')" title="${t("duplicate")}">\u{1F4CB}</button>
-          <button class="b" onclick="p('edit','${p.id}')" title="${t("edit")}">\u2699</button>
+          ${isOpen?`<button class="b b-cls" onclick="p('closeProf','${p.id}')">\u2716</button>`:""}
+          <button class="b b-star ${isDef?"on":""}" onclick="p('setDefault','${p.id}')">\u2605</button>
+          <button class="b" onclick="p('duplicate','${p.id}')">\u{1F4CB}</button>
+          <button class="b" onclick="p('edit','${p.id}')">\u2699</button>
           <button class="b b-del" onclick="p('delete','${p.id}')">\u{1F5D1}</button>
           <button class="b b-up ${first?"lim":""}" onclick="p('up','${p.id}')" ${first?"disabled":""}>▲</button>
           <button class="b b-dn ${last?"lim":""}" onclick="p('down','${p.id}')" ${last?"disabled":""}>▼</button>
@@ -330,8 +400,7 @@ class SidePanel implements vscode.WebviewViewProvider {
 .b{width:20px;height:20px;border:none;border-radius:4px;cursor:pointer;font-size:9px;background:transparent;color:var(--vscode-foreground);opacity:.2;display:flex;align-items:center;justify-content:center;padding:0;transition:all .1s}
 .b:hover{opacity:1;background:var(--vscode-toolbar-hoverBackground)}
 .b-del:hover{color:var(--vscode-errorForeground);opacity:1}
-.b-star{font-size:10px;opacity:.3}
-.b-star.on{color:var(--vscode-editorMarkerNavigationWarning-background);opacity:.7}
+.b-star{font-size:10px;opacity:.3}.b-star.on{color:var(--vscode-editorMarkerNavigationWarning-background);opacity:.7}
 .b-star:hover{opacity:1;color:var(--vscode-editorMarkerNavigationWarning-background)}
 .b-cls{opacity:.5;color:var(--vscode-testing-iconPassed)}.b-cls:hover{opacity:1;color:var(--vscode-errorForeground)}
 .b-up.lim,.b-dn.lim{color:var(--vscode-errorForeground);opacity:.35;cursor:default;pointer-events:none}
@@ -340,8 +409,9 @@ class SidePanel implements vscode.WebviewViewProvider {
 .emp .big{font-size:28px;opacity:.2;display:block;margin-bottom:8px}
 </style></head><body>
 <div class="tb"><span class="ti">CodeHub</span><span class="sub">${tc>0?tc+" "+t("terminalCount").replace("{n}",""):"0"}</span>
+  <button class="ib" onclick="p('runOC')" title="${t("opencodeLaunch")}">\u25B6</button>
+  <button class="ib" onclick="p('addFile')" title="${t("addFile")}">\u{1F4C4}</button>
   <button class="ib" onclick="p('searchLib')" title="${t("addFromLib")}">\u2795</button>
-  <button class="ib" onclick="p('openDesktop')" title="${t("deskOpt")}">\u25A0</button>
   <button class="ib" onclick="p('settings')" title="${t("settings")}">\u2699</button>
 </div>
 <div class="st-bar">
@@ -372,16 +442,17 @@ export function activate(ctx:vscode.ExtensionContext) {
 
   ctx.subscriptions.push(vscode.commands.registerCommand("codehub.runDefault",runDef));
   ctx.subscriptions.push(vscode.commands.registerCommand("codehub.openDesktop",()=>openDesktop(ctx)));
+  ctx.subscriptions.push(vscode.commands.registerCommand("codehub.openOpencodeTerminal",()=>openOpencodeTerminal(ctx)));
+  ctx.subscriptions.push(vscode.commands.registerCommand("codehub.addFileToOpencode",addFileToOpencode));
   ctx.subscriptions.push(vscode.commands.registerCommand("codehub.openSettings",()=>vscode.commands.executeCommand("workbench.action.openSettings",K)));
   ctx.subscriptions.push(vscode.commands.registerCommand("codehub.setStatusBarProfile",()=>pickProf(t("exec"),"statusBarProfile")));
   ctx.subscriptions.push(vscode.commands.registerCommand("codehub.setStartupProfile",()=>pickProf(t("exec"),"startupProfile")));
   ctx.subscriptions.push(vscode.commands.registerCommand("codehub.setShortcutProfile",()=>pickProf(t("exec"),"shortcutProfile")));
   ctx.subscriptions.push(vscode.commands.registerCommand("codehub.exportProfiles",expProf));
   ctx.subscriptions.push(vscode.commands.registerCommand("codehub.importProfiles",impProf));
-  ctx.subscriptions.push(vscode.commands.registerCommand("codehub.setDefaultProfile",async()=>{const p=getP();if(!p.length)return;const pick=await vscode.window.showQuickPick(p.map((x)=>({label:x.name,id:x.id})),{placeHolder:t("emptyDefault")});if(pick)c().update("defaultProfile",pick.id,vscode.ConfigurationTarget.Global);}));
 
   const sb=vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right,100);sb.show();ctx.subscriptions.push(sb);
-  const upd=()=>{const n=vscode.window.terminals.filter((t)=>t.name.includes("CodeHub")).length;sb.text=n>0?`$(terminal) CodeHub (${n})`:"$(terminal) CodeHub";sb.tooltip=t("statusTip");sb.command="codehub.runDefault";};
+  const upd=()=>{const n=vscode.window.terminals.filter((t)=>t.name.includes("CodeHub")||t.name==="opencode"||t.name==="oc-server").length;sb.text=n>0?`$(terminal) CodeHub (${n})`:"$(terminal) CodeHub";sb.tooltip=t("statusTip");sb.command="codehub.runDefault";};
   upd();
   ctx.subscriptions.push(vscode.window.onDidOpenTerminal(upd));
   ctx.subscriptions.push(vscode.window.onDidCloseTerminal(()=>{upd();side.render();}));
@@ -393,4 +464,4 @@ export function activate(ctx:vscode.ExtensionContext) {
   }
 }
 
-export function deactivate(){openTerms.clear();}
+export function deactivate(){openTerms.clear();srvPorts.clear();}
